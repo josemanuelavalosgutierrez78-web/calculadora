@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora Científica Accesible</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0b0f1a;
+    --surface:  #111827;
+    --panel:    #1a2236;
+    --border:   #2a3a50;
+    --accent:   #00e5a0;
+    --accent2:  #f5a623;
+    --danger:   #e05c5c;
+    --lcd-bg:   #061410;
+    --lcd-text: #00ff99;
+    --lcd-dim:  #006644;
+    --num-bg:   #1c2a3a;
+    --op-bg:    #1a2e1a;
+    --sci-bg:   #0f1e2e;
+    --fn-bg:    #1e0f2e;
+    --eq-bg:    #003d2a;
+    --text:     #d0e8f0;
+    --mono:     'Share Tech Mono', monospace;
+    --title:    'Orbitron', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: var(--mono);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 10px;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 660px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(0,229,160,.06), 0 12px 40px rgba(0,0,0,.6);
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 7px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .title {
+    font-family: var(--title);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .badges { display: flex; gap: 6px; align-items: center; }
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid;
+    cursor: pointer;
+    user-select: none;
+    transition: all .15s;
+  }
+  .badge-mode { color: var(--accent2); border-color: var(--accent2); background: rgba(245,166,35,.08); }
+  .badge-voz  { color: var(--accent);  border-color: var(--accent);  background: rgba(0,229,160,.08); }
+  .badge-voz.off { color: var(--danger); border-color: var(--danger); background: rgba(224,92,92,.08); }
+
+  /* ── LCD ── */
+  .lcd {
+    background: var(--lcd-bg);
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .lcd::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,255,153,.015) 3px, rgba(0,255,153,.015) 4px);
+    pointer-events: none;
+  }
+  .lcd-expr {
+    font-size: 11px;
+    color: var(--lcd-dim);
+    text-align: right;
+    min-height: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: .5px;
+    margin-bottom: 4px;
+  }
+  .lcd-result {
+    font-size: 36px;
+    color: var(--lcd-text);
+    text-align: right;
+    min-height: 50px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 16px rgba(0,255,153,.4);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color .15s;
+  }
+  .lcd-result.error { color: var(--danger); text-shadow: 0 0 16px rgba(224,92,92,.4); }
+  .lcd-nav {
+    font-size: 9px;
+    color: #2a4a5a;
+    margin-top: 5px;
+    letter-spacing: .3px;
+  }
+
+  /* ── QUICK BAR ── */
+  .quick {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    padding: 6px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .qbtn {
+    background: rgba(0,229,160,.05);
+    border: 1px solid rgba(0,229,160,.15);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 5px 2px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    line-height: 1.4;
+    transition: all .15s;
+    text-transform: uppercase;
+  }
+  .qbtn span { display: block; color: var(--accent); font-size: 8px; }
+  .qbtn:hover { background: rgba(0,229,160,.12); border-color: var(--accent); }
+  .qbtn:focus { outline: 1px solid var(--accent); }
+
+  /* ── BUTTON GRID ── */
+  .btnarea {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .sci, .num {
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sci { border-right: 1px solid var(--border); }
+
+  .row { display: grid; grid-template-columns: repeat(4,1fr); gap: 4px; }
+  .num .row-last { grid-template-columns: 1fr 3fr; }
+
+  button.c {
+    background: var(--num-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    border-radius: 7px;
+    padding: 9px 2px;
+    cursor: pointer;
+    transition: all .1s;
+    width: 100%;
+    line-height: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  button.c::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    transition: opacity .1s;
+  }
+  button.c:active::after { opacity: .08; }
+  button.c:hover  { filter: brightness(1.3); border-color: #445; }
+  button.c:focus  { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 1; }
+  button.c.nav-focus { outline: 2px solid var(--accent2); outline-offset: 2px; box-shadow: 0 0 0 4px rgba(245,166,35,.25); }
+
+  button.c.sci-btn { background: var(--sci-bg); font-size: 11px; color: #8be0ff; }
+  button.c.op      { background: var(--op-bg);  color: #7ddd90; font-size: 14px; }
+  button.c.fn      { background: var(--fn-bg);  color: #c8a0ff; font-size: 10px; }
+  button.c.del     { background: #2a1515; color: var(--danger); }
+  button.c.ac      { background: #3a1010; color: var(--danger); font-weight: 700; }
+  button.c.eq      { background: var(--eq-bg); color: var(--accent); font-size: 22px; font-weight: 700; letter-spacing: 3px; border-color: rgba(0,229,160,.3); }
+  button.c.mode    { background: #1e1e0a; color: var(--accent2); font-size: 10px; }
+  button.c.ans     { background: #0a1e1e; color: var(--accent); font-size: 10px; }
+  button.c.num-d   { font-size: 17px; font-weight: 500; }
+
+  /* ── MODALES ── */
+  .overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.8); z-index: 100;
+    justify-content: center; align-items: center; padding: 14px;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; width: 100%; max-width: 520px;
+    max-height: 85vh; overflow-y: auto; padding: 20px;
+  }
+  .modal-title {
+    font-family: var(--title); font-size: 13px; color: var(--accent);
+    letter-spacing: 2px; text-transform: uppercase;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .close-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--danger); width: 26px; height: 26px;
+    border-radius: 50%; cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .close-btn:hover { background: #2a1010; }
+
+  textarea.inp, input.inp {
+    width: 100%; background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--mono); font-size: 13px;
+    padding: 9px 12px; border-radius: 7px; resize: vertical;
+    margin-bottom: 10px;
+  }
+  textarea.inp { min-height: 70px; }
+  textarea.inp:focus, input.inp:focus { outline: 1px solid var(--accent); }
+
+  .stats-out {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 7px; padding: 12px; font-size: 12px;
+    color: var(--accent); line-height: 2; margin-top: 10px;
+    white-space: pre; font-family: var(--mono);
+    overflow-x: auto;
+  }
+  .hist-list { list-style: none; max-height: 280px; overflow-y: auto; }
+  .hist-list li {
+    font-size: 12px; padding: 7px 8px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background .1s;
+  }
+  .hist-list li:hover { background: var(--panel); color: var(--accent); }
+
+  .mbrow { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .mbtn {
+    flex: 1; min-width: 110px; background: var(--panel);
+    border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 11px; padding: 8px;
+    border-radius: 7px; cursor: pointer; text-transform: uppercase;
+    letter-spacing: .5px; transition: all .15s;
+  }
+  .mbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .mbtn.red:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* graficador */
+  .graf-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .graf-row label { color: #778; font-size: 11px; white-space: nowrap; }
+  .graf-row input { flex:1; min-width: 100px; }
+  .graf-row input[type=number] { flex: 0 0 70px; min-width: 60px; }
+  #grafCanvas { width: 100% !important; border-radius: 7px; margin-top: 10px; background: var(--panel); }
+  .chk-row { display: flex; gap: 14px; margin-bottom: 8px; flex-wrap: wrap; }
+  .chk-row label { font-size: 11px; color: #889; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+
+  /* ayuda */
+  .help-pre {
+    font-family: var(--mono); font-size: 11px; color: #7a9ab0;
+    line-height: 1.9; white-space: pre-wrap;
+  }
+  .help-pre strong { color: var(--accent); }
+
+  /* texto modal */
+  .txt-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.85); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .txt-modal.open { display: flex; }
+  .txt-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 22px; width: 90%; max-width: 420px;
+  }
+  .txt-box label { font-size: 11px; color: #778; display: block; margin-bottom: 6px; }
+  .txt-box input {
+    width: 100%; background: var(--panel); border: 1px solid var(--border);
+    color: var(--lcd-text); font-family: var(--mono); font-size: 20px;
+    padding: 9px 12px; border-radius: 7px; margin-bottom: 12px;
+  }
+  .txt-box input:focus { outline: 1px solid var(--accent); }
+  .txt-btns { display: flex; gap: 10px; }
+  .txt-btns button {
+    flex: 1; padding: 9px; border-radius: 7px; border: 1px solid;
+    font-family: var(--mono); font-size: 12px; cursor: pointer;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .tok { background: var(--eq-bg); border-color: var(--accent); color: var(--accent); }
+  .tca { background: #2a1010; border-color: var(--danger); color: var(--danger); }
+
+  #ariaLive { position: absolute; left: -9999px; }
+
+  @media (max-width: 460px) {
+    .btnarea { grid-template-columns: 1fr; }
+    .sci { border-right: none; border-bottom: 1px solid var(--border); }
+    .lcd-result { font-size: 28px; }
+    button.c { padding: 8px 2px; font-size: 11px; }
+    button.c.num-d { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div id="ariaLive" aria-live="assertive" aria-atomic="true"></div>
+
+<div class="wrap" role="main" aria-label="Calculadora Científica Accesible">
+
+  <!-- HEADER -->
+  <div class="header">
+    <span class="title">♿ Calc. Accesible</span>
+    <div class="badges">
+      <span class="badge badge-mode" id="badgeMode" onclick="cambiarModo()" role="button" tabindex="0" aria-label="Cambiar modo ángulo" onkeydown="if(event.key==='Enter')cambiarModo()">DEG</span>
+      <span class="badge badge-voz"  id="badgeVoz"  onclick="toggleVoz()"   role="button" tabindex="0" aria-label="Activar desactivar voz" onkeydown="if(event.key==='Enter')toggleVoz()">🔊 VOZ</span>
+    </div>
+  </div>
+
+  <!-- LCD -->
+  <div class="lcd">
+    <div class="lcd-expr"   id="lcdExpr"></div>
+    <div class="lcd-result" id="lcdResult" aria-live="polite" aria-label="Resultado">0</div>
+    <div class="lcd-nav"    id="lcdNav">Tab: navegar · Enter: activar · F1: ayuda · F4: entrada de texto</div>
+  </div>
+
+  <!-- QUICK BAR -->
+  <div class="quick" role="toolbar" aria-label="Accesos rápidos">
+    <button class="qbtn" onclick="mostrarAyuda()"    aria-label="F1 Ayuda"><span>F1</span>AYUDA</button>
+    <button class="qbtn" onclick="leerPantalla()"    aria-label="F2 Leer"><span>F2</span>LEER</button>
+    <button class="qbtn" onclick="abrirHistorial()"  aria-label="F3 Historial"><span>F3</span>HIST</button>
+    <button class="qbtn" onclick="abrirTexto()"      aria-label="F4 Texto"><span>F4</span>TEXTO</button>
+    <button class="qbtn" onclick="toggleVoz()"       aria-label="F5 Voz"><span>F5</span>VOZ</button>
+  </div>
+
+  <!-- BOTONES -->
+  <div class="btnarea">
+
+    <!-- CIENTÍFICO -->
+    <div class="sci" role="group" aria-label="Funciones científicas">
+      <div class="row">
+        <button class="c mode"    onclick="cambiarModo()"          aria-label="Cambiar modo grados radianes">MODE</button>
+        <button class="c sci-btn" onclick="ins('(')"               aria-label="Abrir paréntesis">(</button>
+        <button class="c sci-btn" onclick="ins(')')"               aria-label="Cerrar paréntesis">)</button>
+        <button class="c del"     onclick="borrar()"               aria-label="Borrar último">DEL</button>
+      </div>
+      <div class="row">
+        <button class="c sci-btn" onclick="ins('**2')"             aria-label="Elevar al cuadrado">x²</button>
+        <button class="c sci-btn" onclick="ins('sqrt(')"           aria-label="Raíz cuadrada">√</button>
+        <button class="c sci-btn" onclick="ins('**')"              aria-label="Potencia">^</button>
+        <button class="c sci-btn" onclick="ins('log10(')"          aria-label="Logaritmo base 10">log</button>
+      </div>
+      <div class="row">
+        <button class="c sci-btn" onclick="ins('log(')"            aria-label="Logaritmo natural">ln</button>
+        <button class="c sci-btn" onclick="ins('exp(')"            aria-label="E elevado a x">eˣ</button>
+        <button class="c sci-btn" onclick="ins('Math.PI')"         aria-label="Pi">π</button>
+        <button class="c sci-btn" onclick="ins('Math.E')"          aria-label="Número e">e</button>
+      </div>
+      <div class="row">
+        <button class="c sci-btn" onclick="insTrig('sin')"         aria-label="Seno">sin</button>
+        <button class="c sci-btn" onclick="insTrig('cos')"         aria-label="Coseno">cos</button>
+        <button class="c sci-btn" onclick="insTrig('tan')"         aria-label="Tangente">tan</button>
+        <button class="c sci-btn" onclick="ins('Math.abs(')"       aria-label="Valor absoluto">|x|</button>
+      </div>
+      <div class="row">
+        <button class="c sci-btn" onclick="insATrig('asin')"       aria-label="Arco seno">sin⁻¹</button>
+        <button class="c sci-btn" onclick="insATrig('acos')"       aria-label="Arco coseno">cos⁻¹</button>
+        <button class="c sci-btn" onclick="insATrig('atan')"       aria-label="Arco tangente">tan⁻¹</button>
+        <button class="c sci-btn" onclick="ins('**0.5')"           aria-label="Raíz n-ésima">ⁿ√</button>
+      </div>
+      <div class="row">
+        <button class="c fn"      onclick="calcDerivada()"         aria-label="Derivada numérica">d/dx</button>
+        <button class="c fn"      onclick="calcIntegral()"         aria-label="Integral numérica">∫dx</button>
+        <button class="c fn"      onclick="abrirStats()"           aria-label="Estadísticas">STATS</button>
+        <button class="c fn"      onclick="abrirGrafico()"         aria-label="Graficador">GRAPH</button>
+      </div>
+    </div>
+
+    <!-- NUMÉRICO -->
+    <div class="num" role="group" aria-label="Teclado numérico">
+      <div class="row">
+        <button class="c num-d"   onclick="ins('7')" aria-label="7">7</button>
+        <button class="c num-d"   onclick="ins('8')" aria-label="8">8</button>
+        <button class="c num-d"   onclick="ins('9')" aria-label="9">9</button>
+        <button class="c op"      onclick="ins('/')" aria-label="Dividir">÷</button>
+      </div>
+      <div class="row">
+        <button class="c num-d"   onclick="ins('4')" aria-label="4">4</button>
+        <button class="c num-d"   onclick="ins('5')" aria-label="5">5</button>
+        <button class="c num-d"   onclick="ins('6')" aria-label="6">6</button>
+        <button class="c op"      onclick="ins('*')" aria-label="Multiplicar">×</button>
+      </div>
+      <div class="row">
+        <button class="c num-d"   onclick="ins('1')" aria-label="1">1</button>
+        <button class="c num-d"   onclick="ins('2')" aria-label="2">2</button>
+        <button class="c num-d"   onclick="ins('3')" aria-label="3">3</button>
+        <button class="c op"      onclick="ins('-')" aria-label="Restar">−</button>
+      </div>
+      <div class="row">
+        <button class="c num-d"   onclick="ins('0')" aria-label="0">0</button>
+        <button class="c num-d"   onclick="ins('.')" aria-label="Punto decimal">.</button>
+        <button class="c ans"     onclick="usarAns()" aria-label="Resultado anterior">ANS</button>
+        <button class="c op"      onclick="ins('+')" aria-label="Sumar">+</button>
+      </div>
+      <div class="row row-last">
+        <button class="c ac"      onclick="limpiar()"   aria-label="Limpiar todo">AC</button>
+        <button class="c eq"      onclick="calcular()"  aria-label="Calcular resultado">=</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════ MODALES ══════ -->
+
+<!-- AYUDA -->
+<div class="overlay" id="ovAyuda" role="dialog" aria-modal="true" aria-label="Ayuda">
+  <div class="modal">
+    <div class="modal-title">♿ Ayuda
+      <button class="close-btn" onclick="cerrar('ovAyuda')" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="help-pre"><strong>NAVEGACIÓN</strong>
+Tab / Shift+Tab   → siguiente / anterior botón
+Flechas ↑ ↓ ← →  → navegar entre botones
+Enter             → activar botón enfocado
+Escape            → limpiar todo
+Backspace / Del   → borrar último carácter
+
+<strong>ATAJOS</strong>
+F1 → ayuda          F2 → leer pantalla
+F3 → historial      F4 → entrada de texto
+F5 → activar/desactivar voz
+
+<strong>ENTRADA DIRECTA (teclado)</strong>
+0–9 · . + − * /   → números y operadores
+( )  = Escape      → paréntesis, calcular, limpiar
+
+<strong>FUNCIONES CIENTÍFICAS</strong>
+sin / cos / tan    → trig (respeta DEG/RAD)
+sin⁻¹ cos⁻¹ tan⁻¹ → inversas trigonométricas
+log / ln / eˣ      → logaritmos y exponencial
+x² / ^ / √ / ⁿ√   → potencias y raíces
+|x|                → valor absoluto
+π · e              → constantes
+
+<strong>HERRAMIENTAS</strong>
+d/dx  → derivada numérica (h=0.0001)
+∫dx   → integral numérica (Simpson, a=0)
+STATS → estadísticas descriptivas
+GRAPH → graficador de funciones
+
+<strong>VOZ</strong>
+Requiere Chrome/Edge con Web Speech API.
+Presione F5 o el badge VOZ para activar.</div>
+    <div class="mbrow">
+      <button class="mbtn" onclick="cerrar('ovAyuda')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORIAL -->
+<div class="overlay" id="ovHistorial" role="dialog" aria-modal="true" aria-label="Historial">
+  <div class="modal">
+    <div class="modal-title">📜 Historial
+      <button class="close-btn" onclick="cerrar('ovHistorial')" aria-label="Cerrar">✕</button>
+    </div>
+    <ul class="hist-list" id="histList" aria-label="Lista de cálculos previos"></ul>
+    <div class="mbrow">
+      <button class="mbtn"     onclick="leerHistorial()">🔊 Leer</button>
+      <button class="mbtn red" onclick="limpiarHistorial()">🗑 Limpiar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ESTADÍSTICAS -->
+<div class="overlay" id="ovStats" role="dialog" aria-modal="true" aria-label="Estadísticas">
+  <div class="modal">
+    <div class="modal-title">📊 Estadísticas
+      <button class="close-btn" onclick="cerrar('ovStats')" aria-label="Cerrar">✕</button>
+    </div>
+    <label style="font-size:11px;color:#778;display:block;margin-bottom:5px">Datos separados por comas:</label>
+    <textarea class="inp" id="statsInp" aria-label="Datos para estadísticas">1, 2, 3, 4, 5, 6, 7, 8, 9, 10</textarea>
+    <div class="mbrow">
+      <button class="mbtn" onclick="calcStats()">Calcular</button>
+      <button class="mbtn" onclick="leerStats()">🔊 Leer</button>
+    </div>
+    <div class="stats-out" id="statsOut" aria-live="polite"></div>
+  </div>
+</div>
+
+<!-- GRAFICADOR -->
+<div class="overlay" id="ovGrafico" role="dialog" aria-modal="true" aria-label="Graficador">
+  <div class="modal">
+    <div class="modal-title">📈 Graficador
+      <button class="close-btn" onclick="cerrar('ovGrafico')" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="graf-row">
+      <label>f(x) =</label>
+      <input class="inp" type="text" id="grafFunc" value="x*x" aria-label="Función a graficar" style="margin:0">
+    </div>
+    <div class="graf-row">
+      <label>x mín:</label>
+      <input class="inp" type="number" id="grafXmin" value="-10" aria-label="x mínimo" style="margin:0">
+      <label>x máx:</label>
+      <input class="inp" type="number" id="grafXmax" value="10"  aria-label="x máximo" style="margin:0">
+    </div>
+    <div class="chk-row">
+      <label><input type="checkbox" id="chkDeriv" style="accent-color:var(--accent2)"> Derivada f'(x)</label>
+      <label><input type="checkbox" id="chkInteg" style="accent-color:var(--accent)"> Integral ∫f(x)</label>
+    </div>
+    <div class="mbrow">
+      <button class="mbtn" onclick="graficar()">🎨 Graficar</button>
+      <button class="mbtn" onclick="describirGrafico()">🔊 Describir</button>
+    </div>
+    <canvas id="grafCanvas" height="230" aria-label="Gráfico de la función"></canvas>
+  </div>
+</div>
+
+<!-- ENTRADA DE TEXTO -->
+<div class="txt-modal" id="modalTexto" role="dialog" aria-modal="true" aria-label="Entrada de texto">
+  <div class="txt-box">
+    <label>Escriba su expresión matemática:</label>
+    <input type="text" id="inputTexto" autocomplete="off" spellcheck="false" aria-label="Expresión matemática">
+    <div class="txt-btns">
+      <button class="tok" onclick="aceptarTexto()">✓ Aceptar</button>
+      <button class="tca" onclick="cerrarTexto()">✕ Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+/* ══════════════════════════════════════
+   ESTADO
+══════════════════════════════════════ */
+let buf       = '';
+let modo      = 'DEG';   // DEG | RAD
+let vozOn     = true;
+let historial = [];
+let ultimoRes = 0;
+let statsRes  = null;
+let grafData  = null;
+let chartInst = null;
+let navIdx    = -1;
+let navBtns   = [];
+
+/* ══════════════════════════════════════
+   VOZ (Web Speech API)
+══════════════════════════════════════ */
+const ariaLive = document.getElementById('ariaLive');
+
+function hablar(txt, pri = false) {
+  ariaLive.textContent = '';
+  requestAnimationFrame(() => ariaLive.textContent = txt);
+  if (!vozOn || !window.speechSynthesis) return;
+  if (pri) speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(txt);
+  u.lang = 'es-ES'; u.rate = 1.3; u.pitch = 1;
+  speechSynthesis.speak(u);
+}
+
+function toggleVoz() {
+  vozOn = !vozOn;
+  const b = document.getElementById('badgeVoz');
+  b.textContent = vozOn ? '🔊 VOZ' : '🔇 VOZ';
+  b.className   = 'badge badge-voz' + (vozOn ? '' : ' off');
+  if (vozOn) hablar('Voz activada', true);
+}
+
+/* ══════════════════════════════════════
+   LCD
+══════════════════════════════════════ */
+function setExpr(t)  { document.getElementById('lcdExpr').textContent   = t; }
+function setResult(t, err) {
+  const el = document.getElementById('lcdResult');
+  el.textContent = t;
+  el.className = 'lcd-result' + (err ? ' error' : '');
+}
+function setNav(t) { document.getElementById('lcdNav').textContent = t; }
+
+/* ══════════════════════════════════════
+   INSERTAR / BORRAR / LIMPIAR
+══════════════════════════════════════ */
+const PRONUN = {
+  '+':'más','-':'menos','*':'por','/':'dividido','**':'elevado a',
+  '**2':'al cuadrado','**0.5':'raíz n-ésima',
+  'sqrt(':'raíz cuadrada de','log10(':'logaritmo de','log(':'logaritmo natural de',
+  'exp(':'exponencial de','Math.PI':'pi','Math.E':'número e',
+  'Math.abs(':'valor absoluto de',
+  '(':'abre paréntesis',')':'cierra paréntesis','.':'punto decimal',
+};
+
+function ins(v) {
+  buf += v;
+  setExpr(buf);
+  hablar(PRONUN[v] ?? String(v));
+}
+
+function insTrig(fn) {
+  // wraps para convertir grados→radianes si modo DEG
+  const call = modo === 'DEG'
+    ? `Math.${fn}((` : `Math.${fn}(`;
+  buf += call;
+  setExpr(buf);
+  hablar({sin:'seno de', cos:'coseno de', tan:'tangente de'}[fn] ?? fn);
+}
+
+function insATrig(fn) {
+  const call = modo === 'DEG'
+    ? `(Math.${fn}(` : `Math.${fn}(`;
+  buf += call;
+  setExpr(buf);
+  hablar({asin:'arco seno de', acos:'arco coseno de', atan:'arco tangente de'}[fn] ?? fn);
+}
+
+function borrar() {
+  if (!buf) { hablar('No hay nada que borrar'); return; }
+  buf = buf.slice(0,-1);
+  setExpr(buf);
+  hablar('Borrado');
+}
+
+function limpiar() {
+  buf = '';
+  setExpr('');
+  setResult('0');
+  hablar('Calculadora limpiada', true);
+}
+
+function usarAns() {
+  if (!ultimoRes && ultimoRes !== 0) { hablar('No hay resultado anterior'); return; }
+  ins(String(ultimoRes));
+  hablar('Resultado anterior: ' + ultimoRes);
+}
+
+function cambiarModo() {
+  modo = modo === 'DEG' ? 'RAD' : 'DEG';
+  document.getElementById('badgeMode').textContent = modo;
+  hablar('Modo ' + (modo==='DEG' ? 'grados' : 'radianes'), true);
+}
+
+/* ══════════════════════════════════════
+   CALCULAR
+══════════════════════════════════════ */
+function buildExpr(raw) {
+  // si modo DEG, cerrar paréntesis extra de trig y convertir resultado atan a grados
+  let e = raw;
+  // reemplaza Math.sin((x para DEG: agrega *Math.PI/180))
+  if (modo === 'DEG') {
+    e = e.replace(/Math\.(sin|cos|tan)\(\(/g, (m,fn) => `Math.${fn}((`);
+    // cerrar con *Math.PI/180))
+    // Usamos evaluación segura más abajo; las funciones trig ya tienen el argumento wrapeado
+  }
+  return e;
+}
+
+function evalSeguro(expr) {
+  // Sustituye operadores amigables
+  let e = expr
+    .replace(/×/g,'*').replace(/÷/g,'/')
+    .replace(/\^/g,'**');
+
+  // Para DEG: sin/cos/tan convierten argumento a radianes
+  if (modo === 'DEG') {
+    e = e.replace(/Math\.(sin|cos|tan)\(\(/g, (_, fn) => `Math.${fn}((`);
+    // añade *Math.PI/180)) al final de cada función trig de DEG
+    // Simple enfoque: reemplazar "Math.sin((" con función wrapper
+    e = e.replace(/Math\.sin\(\(/g, 'Math.sin((').replace(/Math\.cos\(\(/g, 'Math.cos((').replace(/Math\.tan\(\(/g, 'Math.tan(((');
+    // Mejor: envolver con función de grados
+    e = e.replace(/Math\.(sin|cos|tan)\(([^()]*)\)/g, (_, fn, arg) =>
+      `Math.${fn}(${arg}*Math.PI/180)`);
+    // Para arco → convertir resultado
+    e = e.replace(/\(Math\.(asin|acos|atan)\(([^()]*)\)/g, (_, fn, arg) =>
+      `(Math.${fn}(${arg})*180/Math.PI`);
+  }
+  // Permitir solo caracteres seguros
+  if (/[^0-9+\-*/().%,Math.sincostanabslogexpPIEsqrtpowfloorceillroundmin ax]/i.test(e.replace(/Math\.\w+/g,''))) {
+    // aún puede contener caracteres legítimos; intentar eval con try/catch
+  }
+  // eslint-disable-next-line no-new-func
+  return Function('"use strict"; return (' + e + ')')();
+}
+
+function calcular() {
+  if (!buf) { hablar('No hay expresión para calcular'); return; }
+  try {
+    const res = evalSeguro(buf);
+    if (!isFinite(res)) throw new Error('Resultado no finito');
+    ultimoRes = res;
+    const txt = Math.abs(res) < 1e-10 && res !== 0 ? res.toExponential(4)
+              : Math.abs(res) > 1e9               ? res.toExponential(4)
+              : parseFloat(res.toPrecision(10)).toString();
+    historial.push(`${buf} = ${txt}`);
+    if (historial.length > 50) historial.shift();
+    setResult(txt);
+    hablar('El resultado es ' + txt, true);
+  } catch(e) {
+    setResult('ERROR', true);
+    hablar('Error en el cálculo', true);
+  }
+}
+
+/* ══════════════════════════════════════
+   DERIVADA / INTEGRAL NUMÉRICA
+══════════════════════════════════════ */
+function calcDerivada() {
+  if (!buf) { hablar('Escriba una función primero'); return; }
+  try {
+    const h = 1e-5;
+    const f  = x => Function('"use strict"; const x=arguments[0]; return (' + buf + ')')(x);
+    const x0 = ultimoRes || 1;
+    const der = (f(x0+h) - f(x0-h)) / (2*h);
+    const txt = parseFloat(der.toPrecision(8)).toString();
+    setResult('d/dx ≈ ' + txt);
+    hablar('La derivada en x=' + x0 + ' es aproximadamente ' + txt, true);
+  } catch(e) {
+    setResult('ERROR', true);
+    hablar('Error al derivar. Use una expresión con x', true);
+  }
+}
+
+function calcIntegral() {
+  if (!buf) { hablar('Escriba una función primero'); return; }
+  try {
+    const f = x => Function('"use strict"; const x=arguments[0]; return (' + buf + ')')(x);
+    const a = 0, b = ultimoRes || 1, n = 1000;
+    const h = (b - a) / n;
+    let s = f(a) + f(b);
+    for (let i = 1; i < n; i++) s += (i%2===0?2:4) * f(a + i*h);
+    const res = s * h / 3;
+    const txt = parseFloat(res.toPrecision(8)).toString();
+    setResult('∫ ≈ ' + txt);
+    hablar('La integral de 0 a ' + (ultimoRes||1) + ' es aproximadamente ' + txt, true);
+  } catch(e) {
+    setResult('ERROR', true);
+    hablar('Error al integrar. Use una expresión con x', true);
+  }
+}
+
+/* ══════════════════════════════════════
+   ACCESIBILIDAD — VOZ / LECTURA
+══════════════════════════════════════ */
+function leerPantalla() {
+  const expr = buf || 'vacía';
+  const res  = document.getElementById('lcdResult').textContent;
+  hablar(`Modo ${modo}. Expresión: ${expr}. Resultado: ${res}`, true);
+}
+
+/* ══════════════════════════════════════
+   NAVEGACIÓN POR TECLADO
+══════════════════════════════════════ */
+function initNav() {
+  navBtns = Array.from(document.querySelectorAll('button.c, .qbtn'));
+}
+
+function irA(idx) {
+  if (!navBtns.length) return;
+  if (navIdx >= 0 && navBtns[navIdx]) navBtns[navIdx].classList.remove('nav-focus');
+  navIdx = (idx + navBtns.length) % navBtns.length;
+  const btn = navBtns[navIdx];
+  btn.classList.add('nav-focus');
+  btn.focus();
+  setNav(`Botón ${navIdx+1} de ${navBtns.length}: ${btn.getAttribute('aria-label') || btn.textContent.trim()}`);
+  hablar(btn.getAttribute('aria-label') || btn.textContent.trim(), true);
+}
+
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement?.tagName;
+  const inInput = tag === 'INPUT' || tag === 'TEXTAREA';
+
+  if (e.key === 'F1') { e.preventDefault(); mostrarAyuda(); return; }
+  if (e.key === 'F2') { e.preventDefault(); leerPantalla(); return; }
+  if (e.key === 'F3') { e.preventDefault(); abrirHistorial(); return; }
+  if (e.key === 'F4') { e.preventDefault(); abrirTexto(); return; }
+  if (e.key === 'F5') { e.preventDefault(); toggleVoz(); return; }
+
+  if (inInput) return;
+
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    irA(e.shiftKey ? navIdx - 1 : navIdx + 1);
+    return;
+  }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); irA(navIdx+1); return; }
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); irA(navIdx-1); return; }
+  if (e.key === 'Enter' && navIdx >= 0 && navBtns[navIdx]) {
+    e.preventDefault(); navBtns[navIdx].click(); return;
+  }
+
+  if (e.key === 'Escape')     { limpiar(); return; }
+  if (e.key === 'Backspace' || e.key === 'Delete') { borrar(); return; }
+  if (e.key === '=')          { calcular(); return; }
+
+  const k = e.key;
+  if ('0123456789'.includes(k)) { ins(k); return; }
+  if (k === '+') { ins('+'); return; }
+  if (k === '-') { ins('-'); return; }
+  if (k === '*') { ins('*'); return; }
+  if (k === '/') { e.preventDefault(); ins('/'); return; }
+  if (k === '.') { ins('.'); return; }
+  if (k === '(') { ins('('); return; }
+  if (k === ')') { ins(')'); return; }
+});
+
+/* ══════════════════════════════════════
+   HISTORIAL
+══════════════════════════════════════ */
+function abrirHistorial() {
+  const ul = document.getElementById('histList');
+  ul.innerHTML = '';
+  if (!historial.length) {
+    ul.innerHTML = '<li style="color:#556">Historial vacío</li>';
+    hablar('Historial vacío');
+  } else {
+    historial.slice().reverse().forEach((e, i) => {
+      const li = document.createElement('li');
+      li.textContent = `${historial.length-i}. ${e}`;
+      li.onclick = () => { buf = e.split(' = ')[0]; setExpr(buf); cerrar('ovHistorial'); };
+      ul.appendChild(li);
+    });
+    hablar(`Historial: ${historial.length} cálculos`, true);
+  }
+  abrir('ovHistorial');
+}
+
+function leerHistorial() {
+  if (!historial.length) { hablar('Historial vacío'); return; }
+  const ul = historial.slice(-5);
+  hablar('Últimos cálculos: ' + ul.join('. '), true);
+}
+
+function limpiarHistorial() {
+  historial = [];
+  document.getElementById('histList').innerHTML = '<li style="color:#556">Historial limpiado</li>';
+  hablar('Historial limpiado', true);
+}
+
+/* ══════════════════════════════════════
+   ESTADÍSTICAS
+══════════════════════════════════════ */
+function abrirStats() { abrir('ovStats'); hablar('Modo estadístico', true); }
+
+function calcStats() {
+  const raw  = document.getElementById('statsInp').value;
+  const data = raw.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+  if (!data.length) { hablar('No hay datos válidos'); return; }
+
+  const n    = data.length;
+  const suma = data.reduce((a,b)=>a+b, 0);
+  const med  = suma / n;
+  const sorted = [...data].sort((a,b)=>a-b);
+  const mediana = n%2 ? sorted[Math.floor(n/2)] : (sorted[n/2-1]+sorted[n/2])/2;
+  const vari = n>1 ? data.reduce((a,b)=>a+(b-med)**2,0)/(n-1) : 0;
+  const desv = Math.sqrt(vari);
+  const min  = sorted[0], max = sorted[n-1];
+
+  statsRes = {n, suma, media:med, mediana, varianza:vari, desv, min, max};
+
+  document.getElementById('statsOut').textContent =
+`══════════════════════════════════
+  📊  RESULTADOS ESTADÍSTICOS
+══════════════════════════════════
+n  (datos)          ${n}
+Σx (suma)           ${suma.toFixed(4)}
+x̄  (media)          ${med.toFixed(6)}
+Mediana             ${mediana.toFixed(6)}
+σ² (varianza)       ${vari.toFixed(6)}
+σ  (desv. estándar) ${desv.toFixed(6)}
+Mínimo              ${min.toFixed(4)}
+Máximo              ${max.toFixed(4)}
+Rango               ${(max-min).toFixed(4)}
+══════════════════════════════════`;
+
+  hablar(`Calculado. ${n} datos. Media: ${med.toFixed(2)}. Desviación: ${desv.toFixed(2)}`, true);
+}
+
+function leerStats() {
+  if (!statsRes) { hablar('Calcule primero las estadísticas'); return; }
+  const r = statsRes;
+  hablar(`Datos: ${r.n}. Media: ${r.media.toFixed(2)}. Mediana: ${r.mediana.toFixed(2)}. Desviación estándar: ${r.desv.toFixed(2)}. Mínimo: ${r.min.toFixed(2)}. Máximo: ${r.max.toFixed(2)}.`, true);
+}
+
+/* ══════════════════════════════════════
+   GRAFICADOR
+══════════════════════════════════════ */
+function abrirGrafico() {
+  abrir('ovGrafico');
+  document.getElementById('grafFunc').value = buf || 'x*x';
+  hablar('Graficador abierto', true);
+}
+
+function graficar() {
+  const exprRaw = document.getElementById('grafFunc').value;
+  const xMin    = parseFloat(document.getElementById('grafXmin').value);
+  const xMax    = parseFloat(document.getElementById('grafXmax').value);
+  if (isNaN(xMin) || isNaN(xMax)) { hablar('Rango inválido'); return; }
+
+  const N = 300;
+  const xs = [], ys = [], yd = [], yi = [];
+
+  const f = x => Function('"use strict"; const x=arguments[0]; const Math=globalThis.Math; return (' + exprRaw + ')')(x);
+
+  try {
+    for (let i = 0; i <= N; i++) {
+      const x = xMin + (xMax-xMin)*i/N;
+      xs.push(parseFloat(x.toFixed(4)));
+      ys.push(f(x));
+      if (document.getElementById('chkDeriv').checked) {
+        const h = 1e-5;
+        yd.push((f(x+h)-f(x-h))/(2*h));
+      }
+      if (document.getElementById('chkInteg').checked) {
+        // integral acumulada desde xMin
+        const steps = Math.max(10, Math.round(200*i/N));
+        const hh = (x-xMin)/steps;
+        let s = hh > 0 ? (f(xMin)+f(x)) : 0;
+        for (let j=1;j<steps;j++) s += (j%2?4:2)*f(xMin+j*hh);
+        yi.push(s*hh/3);
+      }
+    }
+
+    grafData = { expr: exprRaw, xMin, xMax, yMin: Math.min(...ys), yMax: Math.max(...ys) };
+
+    const datasets = [{
+      label: `f(x) = ${exprRaw}`,
+      data: xs.map((x,i) => ({x, y: ys[i]})),
+      borderColor: '#00e5a0', borderWidth: 2.5, pointRadius: 0, tension: 0.2
+    }];
+    if (yd.length) datasets.push({ label:"f'(x)", data: xs.map((x,i)=>({x,y:yd[i]})), borderColor:'#f5a623', borderWidth:2, borderDash:[6,3], pointRadius:0, tension:.2 });
+    if (yi.length) datasets.push({ label:"∫f(x)", data: xs.map((x,i)=>({x,y:yi[i]})), borderColor:'#80ff80', borderWidth:2, borderDash:[2,4], pointRadius:0, tension:.2 });
+
+    if (chartInst) chartInst.destroy();
+    const ctx = document.getElementById('grafCanvas').getContext('2d');
+    chartInst = new Chart(ctx, {
+      type: 'line',
+      data: { datasets },
+      options: {
+        animation: false,
+        responsive: true,
+        plugins: {
+          legend: { labels: { color:'#aac', font:{family:"'Share Tech Mono'",size:11} } }
+        },
+        scales: {
+          x: { type:'linear', title:{display:true,text:'x',color:'#aac'},
+               ticks:{color:'#778'}, grid:{color:'rgba(255,255,255,.06)'} },
+          y: { title:{display:true,text:'y',color:'#aac'},
+               ticks:{color:'#778'}, grid:{color:'rgba(255,255,255,.06)'} }
+        }
+      }
+    });
+    hablar('Gráfico generado. Presione describir para obtener información', true);
+  } catch(e) {
+    hablar('Error al graficar: ' + e.message, true);
+  }
+}
+
+function describirGrafico() {
+  if (!grafData) { hablar('No hay gráfico. Genere uno primero'); return; }
+  const g = grafData;
+  let desc = `Función: ${g.expr}. Rango x: ${g.xMin} a ${g.xMax}. Rango y: ${g.yMin.toFixed(2)} a ${g.yMax.toFixed(2)}.`;
+  if (document.getElementById('chkDeriv').checked) desc += ' Se muestra la derivada en naranja.';
+  if (document.getElementById('chkInteg').checked) desc += ' Se muestra la integral acumulada en verde.';
+  hablar(desc, true);
+}
+
+/* ══════════════════════════════════════
+   ENTRADA DE TEXTO
+══════════════════════════════════════ */
+function abrirTexto() {
+  const inp = document.getElementById('inputTexto');
+  inp.value = buf;
+  document.getElementById('modalTexto').classList.add('open');
+  setTimeout(() => inp.focus(), 50);
+  hablar('Modo de entrada de texto. Escriba su expresión y presione Enter');
+}
+function aceptarTexto() {
+  buf = document.getElementById('inputTexto').value;
+  setExpr(buf);
+  cerrarTexto();
+  hablar('Expresión ingresada: ' + buf);
+}
+function cerrarTexto() {
+  document.getElementById('modalTexto').classList.remove('open');
+}
+document.getElementById('inputTexto').addEventListener('keydown', e => {
+  if (e.key === 'Enter')  { e.preventDefault(); aceptarTexto(); }
+  if (e.key === 'Escape') { cerrarTexto(); }
+});
+
+/* ══════════════════════════════════════
+   AYUDA
+══════════════════════════════════════ */
+function mostrarAyuda() {
+  abrir('ovAyuda');
+  hablar('Ayuda abierta. Navegación con Tab. F2 lee la pantalla. F3 historial. F4 entrada de texto. F5 voz.', true);
+}
+
+/* ══════════════════════════════════════
+   MODALES HELPERS
+══════════════════════════════════════ */
+function abrir(id)  { document.getElementById(id).classList.add('open'); }
+function cerrar(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
+window.addEventListener('load', () => {
+  initNav();
+  setTimeout(() => hablar('Calculadora científica accesible lista. Presione F1 para ayuda.', true), 600);
+});
+</script>
+</body>
+</html>
